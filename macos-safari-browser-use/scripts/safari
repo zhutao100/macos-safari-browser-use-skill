@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND="$SCRIPT_DIR/lib/safari-control.applescript"
+CMD="${1:-help}"
+shift || true
+
+json_escape() {
+  # Minimal JSON string escaper for shell-side WebDriver commands.
+  local s="$1"
+  s=${s//\\/\\\\}
+  s=${s//\"/\\\"}
+  s=${s//$'\n'/\\n}
+  s=${s//$'\r'/\\n}
+  s=${s//$'\t'/\\t}
+  printf '%s' "$s"
+}
+
+json_fail() {
+  printf '{"success":false,"error":"%s"}\n' "$(json_escape "$1")"
+}
+
+case "$CMD" in
+  help|--help|-h)
+    cat <<'HELP'
+macos-safari-browser-use/scripts/safari — Safari.app automation CLI
+
+READ / DISCOVER
+  version                         Safari + macOS version
+  activate                        Bring Safari to foreground
+  windows                         List Safari windows
+  window-count                    Count Safari windows
+  tabs [--window N]               List tabs across all windows or one window
+  tab-count [--window N]          Count tabs in a window
+  current                         Current tab metadata
+  title [--window N --tab N]      Current/target tab title
+  url [--window N --tab N]        Current/target tab URL
+  text [selector] [--window N --tab N]
+                                  Visible text for page or selector
+  links [--window N --tab N]      List links in target tab
+  query <selector> [--window N --tab N]
+                                  Text summary for matching elements
+  source [--window N --tab N]     Full page HTML
+
+NAVIGATE / MUTATE
+  open <url> [current|new-tab|background-tab|new-window]
+  new-tab [url]
+  new-window [url]
+  focus-window <window>
+  close-window [window]
+  focus-tab <window> <tab>
+  close-tab [--window N --tab N]
+  reload [--window N --tab N]
+  wait [seconds] [--window N --tab N]
+  screenshot [absolute-output-path]
+  reading-list-add <url>
+
+DOM JAVASCRIPT / INTERACTION
+  js <code> [--window N --tab N]
+                                  Run explicit JS; result is JSON-stringified by AppleScript
+  js-json <expression> [--window N --tab N]
+                                  Evaluate JSON-serializable JS expression and return object/array
+  click <selector> [--window N --tab N]
+  type <selector> <text> [--window N --tab N]
+
+WEBDRIVER
+  webdriver-check                 Check /usr/bin/safaridriver availability/version
+  webdriver-enable                Run /usr/bin/safaridriver --enable (may prompt/admin auth)
+
+All commands except help return JSON.
+HELP
+    exit 0
+    ;;
+  check)
+    exec "$SCRIPT_DIR/check-setup.sh"
+    ;;
+  webdriver-check)
+    if [[ ! -x /usr/bin/safaridriver ]]; then
+      json_fail "/usr/bin/safaridriver not found"
+      exit 1
+    fi
+    version="$(/usr/bin/safaridriver --version 2>&1 || true)"
+    printf '{"success":true,"path":"/usr/bin/safaridriver","version":"%s"}\n' "$(json_escape "$version")"
+    exit 0
+    ;;
+  webdriver-enable)
+    if [[ ! -x /usr/bin/safaridriver ]]; then
+      json_fail "/usr/bin/safaridriver not found"
+      exit 1
+    fi
+    tmp_out="$(mktemp)"
+    tmp_err="$(mktemp)"
+    trap 'rm -f "$tmp_out" "$tmp_err"' EXIT
+    if /usr/bin/safaridriver --enable >"$tmp_out" 2>"$tmp_err"; then
+      printf '{"success":true,"action":"safaridriver --enable","stdout":"%s","stderr":"%s"}\n' \
+        "$(json_escape "$(cat "$tmp_out")")" "$(json_escape "$(cat "$tmp_err")")"
+      exit 0
+    fi
+    status=$?
+    printf '{"success":false,"action":"safaridriver --enable","exit_code":%d,"stdout":"%s","stderr":"%s"}\n' \
+      "$status" "$(json_escape "$(cat "$tmp_out")")" "$(json_escape "$(cat "$tmp_err")")"
+    exit "$status"
+    ;;
+esac
+
+if [[ ! -x /usr/bin/osascript ]]; then
+  json_fail "/usr/bin/osascript is required"
+  exit 1
+fi
+
+exec /usr/bin/osascript "$BACKEND" "$CMD" "$@"
