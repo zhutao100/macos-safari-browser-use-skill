@@ -102,6 +102,8 @@ macos-safari-browser-use/scripts/commands/tab/reload.sh [--window N --tab N]
 macos-safari-browser-use/scripts/commands/tab/wait.sh [seconds] [--window N --tab N]
 ```
 
+`wait` defaults to 15 seconds. You can omit the seconds value and pass only `--window`/`--tab` flags.
+
 Tab object shape:
 
 ```json
@@ -132,6 +134,7 @@ Notes:
 
 - Bare domains are normalized to `https://<domain>`.
 - `about:`, `file:`, `http:`, `https:`, and custom URL schemes are preserved.
+- The JSON result includes `window` and `tab` when the opened target can be identified. Use those indexes for follow-up reads instead of assuming the opened tab became the front tab.
 - Opening a URL is a write action because it changes browser state.
 
 ## Page reads

@@ -94,6 +94,7 @@ macos-safari-browser-use/scripts/safari open https://example.com new-tab
 macos-safari-browser-use/scripts/safari wait 10
 macos-safari-browser-use/scripts/safari text
 macos-safari-browser-use/scripts/safari webdriver-check
+make test-live
 ```
 
 If `do JavaScript` fails after an upgrade, re-check the Develop-menu setting for JavaScript from Apple Events.

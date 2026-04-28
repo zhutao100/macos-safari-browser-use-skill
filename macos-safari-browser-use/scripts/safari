@@ -22,7 +22,7 @@ json_fail() {
 }
 
 case "$CMD" in
-  help|--help|-h)
+  help | --help | -h)
     cat <<'HELP'
 macos-safari-browser-use/scripts/safari — Safari.app automation CLI
 

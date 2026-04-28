@@ -15,3 +15,21 @@ repos:
       - id: detect-private-key
       - id: check-added-large-files
         args: ["--maxkb=1024"]
+  - repo: local
+    hooks:
+      - id: shfmt
+        name: shfmt
+        entry: shfmt -w -i 2 -ci
+        language: system
+        files: '(^|/)([^/]+\.sh|safari|pre-commit)$'
+      - id: shellcheck
+        name: shellcheck
+        entry: shellcheck -x
+        language: system
+        files: '(^|/)([^/]+\.sh|safari|pre-commit)$'
+      - id: make-check
+        name: make check
+        entry: make check
+        language: system
+        pass_filenames: false
+        always_run: true

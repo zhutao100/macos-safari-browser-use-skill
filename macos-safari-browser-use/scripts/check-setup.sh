@@ -56,7 +56,8 @@ if [[ "$(uname -s 2>/dev/null || true)" == "Darwin" && -x /usr/bin/osascript ]];
     add_check "Automation permission" false "$automation_out" true
   fi
 
-  js_out="$(/usr/bin/osascript <<'APPLESCRIPT' 2>&1 || true
+  js_out="$(
+    /usr/bin/osascript <<'APPLESCRIPT' 2>&1 || true
 try
   tell application "Safari"
     activate
@@ -71,7 +72,7 @@ on error errMsg number errNum
   return errMsg
 end try
 APPLESCRIPT
-)"
+  )"
   if [[ "$js_out" == "2" || "$js_out" == "2.0" ]]; then
     add_check "JavaScript from Apple Events" true "Safari accepted do JavaScript in the front tab." true
   else
@@ -79,10 +80,10 @@ APPLESCRIPT
   fi
 fi
 
-if [[ -x /usr/bin/screencapture ]]; then
-  add_check "screencapture" true "/usr/bin/screencapture available for window screenshots." false
+if [[ -x /usr/sbin/screencapture ]]; then
+  add_check "screencapture" true "/usr/sbin/screencapture available for window screenshots." false
 else
-  add_check "screencapture" false "/usr/bin/screencapture missing; screenshot command will fail." false
+  add_check "screencapture" false "/usr/sbin/screencapture missing; screenshot command will fail." false
 fi
 
 if [[ -x /usr/bin/safaridriver ]]; then

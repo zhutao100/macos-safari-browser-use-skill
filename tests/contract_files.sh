@@ -18,6 +18,8 @@ required=(
   "$SKILL_DIR/references/research-and-validation.md"
   "$SKILL_DIR/assets/js/page-summary.js"
   "$SKILL_DIR/assets/webdriver/safari_smoke_test.py"
+  "$ROOT_DIR/tests/applescript_compile.sh"
+  "$ROOT_DIR/tests/live_safari_e2e.sh"
 )
 
 for file in "${required[@]}"; do
@@ -48,12 +50,12 @@ fi
 
 tmp_scripts="$(mktemp)"
 trap 'rm -f "$tmp_scripts"' EXIT
-find "$SKILL_DIR/scripts" -type f \( -name '*.sh' -o -name 'safari' \) > "$tmp_scripts"
+find "$SKILL_DIR/scripts" -type f \( -name '*.sh' -o -name 'safari' \) >"$tmp_scripts"
 while IFS= read -r script; do
   if [[ ! -x "$script" ]]; then
     echo "script is not executable: $script" >&2
     exit 1
   fi
-done < "$tmp_scripts"
+done <"$tmp_scripts"
 
 echo "contract_files: ok"

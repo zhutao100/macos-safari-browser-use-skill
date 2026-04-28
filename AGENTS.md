@@ -50,7 +50,7 @@ make check
 make test
 ```
 
-On a configured Mac, also run:
+On a configured Mac or GhostVM test guest, also run:
 
 ```bash
 macos-safari-browser-use/scripts/check-setup.sh
@@ -58,13 +58,19 @@ macos-safari-browser-use/scripts/safari tabs
 macos-safari-browser-use/scripts/safari open https://example.com new-tab
 macos-safari-browser-use/scripts/safari wait 10
 macos-safari-browser-use/scripts/safari text
+make test-live
 ```
+
+`make test-live` is intentionally opt-in and state-changing: it opens a temporary Safari window, runs DOM read/write commands, takes a screenshot, and closes the window.
+Set `SAFARI_LIVE_FIXTURE_HTML=/absolute/path/to/sample.html` to include an offline HTML fixture without dumping its contents.
 
 ## Editing rules
 
 - Keep `SKILL.md` concise. Add detail to `references/`.
 - Keep scripts compatible with macOS `/bin/bash` 3.2 where shell is used.
 - Avoid external dependencies such as `jq`; the command backend emits JSON directly.
+- Keep the single root `.pre-commit-config.yaml` unless the repo gains real subprojects; current Python/JavaScript files are small validation/assets, not separate workspaces.
+- Pre-commit is run through `prek` with `.githooks/pre-commit`; keep `core.hooksPath=.githooks` and run `prek run --all-files` after changing hook config.
 - If adding commands, add wrappers under `scripts/commands/**`, update `references/command-reference.md`, and update `tests/contract_files.sh`.
 - Do not claim support for Safari profile manipulation unless it is verified on current macOS through a stable, documented API.
 

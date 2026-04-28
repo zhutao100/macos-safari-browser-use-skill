@@ -56,3 +56,5 @@ Operational conclusions:
 | WebDriver commands included but not auto-enabled | Remote automation is a user-visible setup change. |
 | Profiles documented but not scripted | Stable public APIs are insufficient for robust profile manipulation. |
 | UI scripting avoided | Reduces permissions and future UI-breakage risk. |
+| `make check` includes AppleScript compilation | Catches Safari backend syntax errors before live browser checks. |
+| `make test-live` is opt-in | It opens a Safari window, mutates a local fixture DOM, captures a screenshot, and is best run in a disposable VM or supervised local session. |

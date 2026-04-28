@@ -70,6 +70,13 @@ See `macos-safari-browser-use/references/permissions-and-setup.md` for the exact
 ```bash
 make check
 make test
+make test-live
 ```
 
-`make test` runs pure shell contract checks everywhere and skips live Safari checks on non-macOS hosts.
+`make test` runs contract, shell, AppleScript compile, and lightweight Safari smoke checks. `make test-live` is opt-in because it opens a Safari test window, runs DOM interaction commands, and captures a screenshot.
+
+To include an offline HTML fixture in the live flow:
+
+```bash
+SAFARI_LIVE_FIXTURE_HTML=/absolute/path/to/sample.html make test-live
+```

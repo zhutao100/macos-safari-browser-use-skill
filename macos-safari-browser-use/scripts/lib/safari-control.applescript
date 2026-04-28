@@ -215,7 +215,10 @@ end commandReload
 
 on commandWait(argv)
 	set timeoutSeconds to 15
-	if (count of argv) >= 2 then set timeoutSeconds to my asInteger(item 2 of argv, "timeout seconds")
+	if (count of argv) >= 2 then
+		set possibleTimeout to item 2 of argv
+		if possibleTimeout does not start with "--" then set timeoutSeconds to my asInteger(possibleTimeout, "timeout seconds")
+	end if
 	set targetRefs to my getTargetTab(argv)
 	set targetWindowIndex to item 1 of targetRefs
 	set targetTabIndex to item 2 of targetRefs
@@ -340,39 +343,65 @@ on commandOpen(argv)
 	if (count of argv) < 2 then return my jsonFail("usage: open <url> [current|new-tab|background-tab|new-window]")
 	set urlText to my normalizeURL(item 2 of argv)
 	set targetMode to "current"
+	set openedWindowIndex to 0
+	set openedTabIndex to 0
 	if (count of argv) >= 3 then set targetMode to item 3 of argv
 	if targetMode is "tab" then set targetMode to "new-tab"
 	if targetMode is "window" then set targetMode to "new-window"
 	tell application "Safari"
 		activate
 		if targetMode is "new-window" then
-			make new document with properties {URL:urlText}
+			set openedRefs to my makeWindowWithURL(urlText)
+			set openedWindowIndex to item 1 of openedRefs
+			set openedTabIndex to item 2 of openedRefs
 		else if targetMode is "new-tab" then
 			if (count of windows) is 0 then
-				make new document with properties {URL:urlText}
+				set openedRefs to my makeWindowWithURL(urlText)
+				set openedWindowIndex to item 1 of openedRefs
+				set openedTabIndex to item 2 of openedRefs
 			else
 				tell front window
 					set newTab to make new tab with properties {URL:urlText}
+					set URL of newTab to urlText
 					set current tab to newTab
 				end tell
+				set openedWindowIndex to index of front window
+				set openedTabIndex to my currentTabIndex(front window)
 			end if
 		else if targetMode is "background-tab" then
 			if (count of windows) is 0 then
-				make new document with properties {URL:urlText}
+				set openedRefs to my makeWindowWithURL(urlText)
+				set openedWindowIndex to item 1 of openedRefs
+				set openedTabIndex to item 2 of openedRefs
 			else
-				tell front window to make new tab with properties {URL:urlText}
+				tell front window
+					set newTab to make new tab with properties {URL:urlText}
+					set URL of newTab to urlText
+					set openedTabIndex to index of newTab
+				end tell
+				set openedWindowIndex to index of front window
 			end if
 		else if targetMode is "current" then
 			if (count of windows) is 0 then
-				make new document with properties {URL:urlText}
+				set openedRefs to my makeWindowWithURL(urlText)
+				set openedWindowIndex to item 1 of openedRefs
+				set openedTabIndex to item 2 of openedRefs
 			else
-				set URL of current tab of front window to urlText
+				set w to front window
+				set openedWindowIndex to index of w
+				set openedTabIndex to my currentTabIndex(w)
+				set URL of current tab of w to urlText
 			end if
 		else
 			error "unknown open target: " & targetMode
 		end if
 	end tell
-	return "{\"success\":true,\"url\":" & my jsonString(urlText) & ",\"target\":" & my jsonString(targetMode) & "}"
+	if openedWindowIndex is 0 or openedTabIndex is 0 then
+		set openedRefs to my locateTabByURL(urlText)
+		set openedWindowIndex to item 1 of openedRefs
+		set openedTabIndex to item 2 of openedRefs
+	end if
+	return "{\"success\":true,\"url\":" & my jsonString(urlText) & ",\"target\":" & my jsonString(targetMode) & ",\"window\":" & openedWindowIndex & ",\"tab\":" & openedTabIndex & "}"
 end commandOpen
 
 on commandNewTab(argv)
@@ -477,6 +506,57 @@ on tabJson(wi, ti, t, isCurrent)
 	end tell
 	return "{\"window\":" & wi & ",\"index\":" & ti & ",\"current\":" & isCurrent & ",\"name\":" & my jsonString(tabName) & ",\"url\":" & my jsonString(tabURL) & "}"
 end tabJson
+
+on makeWindowWithURL(urlText)
+	tell application "Safari"
+		set oldWindowIds to {}
+		repeat with wi from 1 to (count of windows)
+			set end of oldWindowIds to id of window wi
+		end repeat
+		make new document
+		delay 0.2
+		set wi to my findWindowIndexExcludingIds(oldWindowIds)
+		if wi is 0 then set wi to index of front window
+		set w to window wi
+		set URL of current tab of w to urlText
+		set index of w to 1
+		return {index of w, my currentTabIndex(w)}
+	end tell
+end makeWindowWithURL
+
+on findWindowIndexExcludingIds(oldWindowIds)
+	tell application "Safari"
+		repeat with wi from 1 to (count of windows)
+			set candidateId to id of window wi
+			if not my listContainsValue(oldWindowIds, candidateId) then return wi
+		end repeat
+	end tell
+	return 0
+end findWindowIndexExcludingIds
+
+on locateTabByURL(urlText)
+	tell application "Safari"
+		repeat 20 times
+			repeat with wi from 1 to (count of windows)
+				set w to window wi
+				repeat with ti from 1 to (count of tabs of w)
+					try
+						if (URL of tab ti of w as text) is urlText then return {wi, ti}
+					end try
+				end repeat
+			end repeat
+			delay 0.1
+		end repeat
+	end tell
+	return {0, 0}
+end locateTabByURL
+
+on listContainsValue(valueList, expectedValue)
+	repeat with itemValue in valueList
+		if itemValue is expectedValue then return true
+	end repeat
+	return false
+end listContainsValue
 
 on normalizeURL(urlText)
 	set u to urlText as text
