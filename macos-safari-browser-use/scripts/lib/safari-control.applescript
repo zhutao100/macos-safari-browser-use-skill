@@ -68,19 +68,10 @@ on commandWindows()
 		set parts to {}
 		repeat with wi from 1 to windowCount
 			set w to window wi
-			set windowName to ""
-			try
-				set windowName to name of w as text
-			end try
-			set visibleValue to "false"
-			try
-				if visible of w then set visibleValue to "true"
-			end try
-			set miniValue to "false"
-			try
-				if miniaturized of w then set miniValue to "true"
-			end try
-			set tabsCount to count of tabs of w
+			set windowName to my safeWindowName(w)
+			set visibleValue to my safeWindowVisible(w)
+			set miniValue to my safeWindowMiniaturized(w)
+			set tabsCount to my safeTabCount(w)
 			set currentIndex to my currentTabIndex(w)
 			set end of parts to "{\"index\":" & wi & ",\"name\":" & my jsonString(windowName) & ",\"tabs_count\":" & tabsCount & ",\"current_tab\":" & currentIndex & ",\"visible\":" & visibleValue & ",\"miniaturized\":" & miniValue & "}"
 		end repeat
@@ -129,22 +120,32 @@ on commandTabs(argv)
 			repeat with wi from 1 to (count of windows)
 				set w to window wi
 				set currentIndex to my currentTabIndex(w)
-				repeat with ti from 1 to (count of tabs of w)
-					set t to tab ti of w
-					set isCurrent to "false"
-					if ti = currentIndex then set isCurrent to "true"
-					set end of parts to my tabJson(wi, ti, t, isCurrent)
+				set tabsCount to my safeTabCount(w)
+				repeat with ti from 1 to tabsCount
+					try
+						with timeout of 5 seconds
+							set t to tab ti of w
+						end timeout
+						set isCurrent to "false"
+						if ti = currentIndex then set isCurrent to "true"
+						set end of parts to my tabJson(wi, ti, t, isCurrent)
+					end try
 				end repeat
 			end repeat
 		else
 			if wiArg < 1 or wiArg > (count of windows) then error "window " & wiArg & " not found"
 			set w to window wiArg
 			set currentIndex to my currentTabIndex(w)
-			repeat with ti from 1 to (count of tabs of w)
-				set t to tab ti of w
-				set isCurrent to "false"
-				if ti = currentIndex then set isCurrent to "true"
-				set end of parts to my tabJson(wiArg, ti, t, isCurrent)
+			set tabsCount to my safeTabCount(w)
+			repeat with ti from 1 to tabsCount
+				try
+					with timeout of 5 seconds
+						set t to tab ti of w
+					end timeout
+					set isCurrent to "false"
+					if ti = currentIndex then set isCurrent to "true"
+					set end of parts to my tabJson(wiArg, ti, t, isCurrent)
+				end try
 			end repeat
 		end if
 	end tell
@@ -224,10 +225,14 @@ on commandWait(argv)
 	set targetTabIndex to item 2 of targetRefs
 	set startTime to current date
 	set finalState to "unknown"
+	set lastError to ""
 	tell application "Safari"
 		repeat
 			try
 				set finalState to do JavaScript "document.readyState" in tab targetTabIndex of window targetWindowIndex
+				set lastError to ""
+			on error errMsg number errNum
+				set lastError to errMsg
 			end try
 			if finalState is "complete" then exit repeat
 			if ((current date) - startTime) >= timeoutSeconds then exit repeat
@@ -237,7 +242,9 @@ on commandWait(argv)
 	set elapsedSeconds to ((current date) - startTime)
 	set loadedValue to "false"
 	if finalState is "complete" then set loadedValue to "true"
-	return "{\"success\":true,\"loaded\":" & loadedValue & ",\"readyState\":" & my jsonString(finalState) & ",\"elapsed_seconds\":" & elapsedSeconds & ",\"timeout_seconds\":" & timeoutSeconds & "}"
+	set errorPart to ""
+	if loadedValue is "false" and lastError is not "" then set errorPart to ",\"last_error\":" & my jsonString(lastError)
+	return "{\"success\":true,\"loaded\":" & loadedValue & ",\"readyState\":" & my jsonString(finalState) & ",\"elapsed_seconds\":" & elapsedSeconds & ",\"timeout_seconds\":" & timeoutSeconds & errorPart & "}"
 end commandWait
 
 on commandUrl(argv)
@@ -482,13 +489,62 @@ on getFlagValue(argv, flagName, defaultValue)
 	return defaultValue
 end getFlagValue
 
+on safeWindowName(w)
+	set windowName to ""
+	tell application "Safari"
+		try
+			with timeout of 5 seconds
+				set windowName to name of w as text
+			end timeout
+		end try
+	end tell
+	return windowName
+end safeWindowName
+
+on safeWindowVisible(w)
+	tell application "Safari"
+		try
+			with timeout of 5 seconds
+				if visible of w then return "true"
+			end timeout
+		end try
+	end tell
+	return "false"
+end safeWindowVisible
+
+on safeWindowMiniaturized(w)
+	tell application "Safari"
+		try
+			with timeout of 5 seconds
+				if miniaturized of w then return "true"
+			end timeout
+		end try
+	end tell
+	return "false"
+end safeWindowMiniaturized
+
+on safeTabCount(w)
+	tell application "Safari"
+		try
+			with timeout of 5 seconds
+				return count of tabs of w
+			end timeout
+		end try
+	end tell
+	return 0
+end safeTabCount
+
 on currentTabIndex(w)
 	tell application "Safari"
-		set currentTabRef to current tab of w
-		set tabsCount to count of tabs of w
-		repeat with ti from 1 to tabsCount
-			if tab ti of w is currentTabRef then return ti
-		end repeat
+		try
+			with timeout of 5 seconds
+				set currentTabRef to current tab of w
+				set tabsCount to count of tabs of w
+				repeat with ti from 1 to tabsCount
+					if tab ti of w is currentTabRef then return ti
+				end repeat
+			end timeout
+		end try
 	end tell
 	return 1
 end currentTabIndex
@@ -498,10 +554,14 @@ on tabJson(wi, ti, t, isCurrent)
 		set tabName to ""
 		set tabURL to ""
 		try
-			set tabName to name of t as text
+			with timeout of 5 seconds
+				set tabName to name of t as text
+			end timeout
 		end try
 		try
-			set tabURL to URL of t as text
+			with timeout of 5 seconds
+				set tabURL to URL of t as text
+			end timeout
 		end try
 	end tell
 	return "{\"window\":" & wi & ",\"index\":" & ti & ",\"current\":" & isCurrent & ",\"name\":" & my jsonString(tabName) & ",\"url\":" & my jsonString(tabURL) & "}"

@@ -53,6 +53,7 @@ make test
 On a configured Mac or GhostVM test guest, also run:
 
 ```bash
+SAFARI_SMOKE_LIVE=1 make test-smoke
 macos-safari-browser-use/scripts/check-setup.sh
 macos-safari-browser-use/scripts/safari tabs
 macos-safari-browser-use/scripts/safari open https://example.com new-tab
@@ -61,6 +62,7 @@ macos-safari-browser-use/scripts/safari text
 make test-live
 ```
 
+`tests/smoke_safari.sh` runs read-only Safari checks on local macOS, but skips automatically on CI unless `SAFARI_SMOKE_LIVE=1` is set.
 `make test-live` is intentionally opt-in and state-changing: it opens a temporary Safari window, runs DOM read/write commands, takes a screenshot, and closes the window.
 Set `SAFARI_LIVE_FIXTURE_HTML=/absolute/path/to/sample.html` to include an offline HTML fixture without dumping its contents.
 

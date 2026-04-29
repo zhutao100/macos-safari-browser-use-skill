@@ -103,6 +103,7 @@ macos-safari-browser-use/scripts/commands/tab/wait.sh [seconds] [--window N --ta
 ```
 
 `wait` defaults to 15 seconds. You can omit the seconds value and pass only `--window`/`--tab` flags.
+If `wait` cannot poll `document.readyState`, it returns `loaded:false`, `readyState:"unknown"`, and `last_error` with the Safari AppleScript error.
 
 Tab object shape:
 

@@ -70,10 +70,11 @@ See `macos-safari-browser-use/references/permissions-and-setup.md` for the exact
 ```bash
 make check
 make test
+SAFARI_SMOKE_LIVE=1 make test-smoke
 make test-live
 ```
 
-`make test` runs contract, shell, AppleScript compile, and lightweight Safari smoke checks. `make test-live` is opt-in because it opens a Safari test window, runs DOM interaction commands, and captures a screenshot.
+`make test` runs contract, shell, AppleScript compile, and read-only Safari smoke checks. The smoke checks run on local macOS, but skip automatically on CI unless `SAFARI_SMOKE_LIVE=1` is set. `make test-live` is opt-in because it opens a Safari test window, runs DOM interaction commands, and captures a screenshot.
 
 To include an offline HTML fixture in the live flow:
 

@@ -57,4 +57,5 @@ Operational conclusions:
 | Profiles documented but not scripted | Stable public APIs are insufficient for robust profile manipulation. |
 | UI scripting avoided | Reduces permissions and future UI-breakage risk. |
 | `make check` includes AppleScript compilation | Catches Safari backend syntax errors before live browser checks. |
+| Hosted CI skips read-only Safari smoke checks by default | GitHub-hosted macOS runners can launch Safari into first-run, restore, or permission states that make Apple Events slow or unavailable; set `SAFARI_SMOKE_LIVE=1` only on a prepared runner. |
 | `make test-live` is opt-in | It opens a Safari window, mutates a local fixture DOM, captures a screenshot, and is best run in a disposable VM or supervised local session. |
